@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Seek, SeekFrom, Write};
 use std::time::Duration;
-use bincode::{serialize_into, deserialize_from};
+use bincode::{deserialize_from, serialize_into};
 use serde::{Serialize, Deserialize};
 use std::fs::{OpenOptions, create_dir_all};
 use std::path::Path;
@@ -9,6 +9,7 @@ use std::thread;
 use crate::entities::concrete::{token::{Token, TokenInDatFile}};
 use reqwest;
 use crate::entities::services::panel::Panel;
+use std::fmt::Error;
 pub struct ApplicationFiles;
 
 #[derive(Serialize, Deserialize)]
@@ -24,12 +25,11 @@ impl ApplicationFiles {
 
 }
 
-impl ProgramFileCounter {
+impl ApplicationFiles {
     
     pub async fn update_file_counter(){
 
         let file_counter_path = "app_files\\execution.dat";
-
         let f_path = Path::new(file_counter_path);
         let dir = f_path.parent().unwrap();
         if !dir.exists(){
@@ -55,9 +55,19 @@ impl ProgramFileCounter {
             counter.counter += 1;
             serialize_into(&f, &counter).unwrap();
             //baixa arquivo de ids
-            
-            let url_list = "https://api.coingecko.com/api/v3/coins/list";
-            let response = reqwest::get(url_list).await.unwrap();
+
+        }
+        else{
+            counter.counter += 1;
+            serialize_into(&f, &counter).unwrap();
+        }
+
+    }
+
+    pub async fn get_index_file() -> Result<File, Error>{
+
+        let url_list = "https://api.coingecko.com/api/v3/coins/list";
+        let response = reqwest::get(url_list).await.unwrap();
 
             if response.status().is_success(){
 
@@ -83,15 +93,16 @@ impl ProgramFileCounter {
 
                 f_index.write_all(&serialized).unwrap();
 
+                Ok(f_index)
+
+            }
+            else{
+
+                Err(Error)
+
             }
 
-        }
-        else{
-            counter.counter += 1;
-            serialize_into(&f, &counter).unwrap();
-        }
 
-        
 
     }
 

@@ -1,6 +1,7 @@
 use std::{fmt::Error, io::{self, stdout}, num::ParseIntError};
 
-use crate::enums::menu_option::MenuOption;
+use crate::{entities::concrete::{owner::Owner, wallet::Wallet}, enums::menu_option::MenuOption};
+use crate::enums::prog_status::LoggedOption;
 use crossterm::{cursor::{self, MoveTo}, event::read, execute, terminal::{size, Clear, ClearType}};
 use std::thread;
 use std::time::Duration;
@@ -406,15 +407,9 @@ impl Panel{
 
             }
 
-            MenuOption::EXIT => {
-
-
-
-            }
-
-            MenuOption::INVALID_OPTION => {
-
-
+            _ => {
+                
+                //ignored
 
             }
 
@@ -592,6 +587,35 @@ impl Panel{
 
     }
 
+    pub fn get_logged_user_input() -> LoggedOption{
+        
+        
+        let mut buffer = String::new();
+        let mut output = stdout();
+
+        execute!(output, cursor::SavePosition).unwrap();
+        execute!(output, cursor::MoveTo(10, 8)).unwrap();
+        io::stdin().read_line(&mut buffer).unwrap();
+        execute!(output, cursor::RestorePosition).unwrap();
+        
+        buffer = buffer.trim().to_lowercase();
+        
+        if "b".to_string() == buffer{
+            return LoggedOption::Buy;
+        }
+        else if "l".to_string() == buffer{
+            return LoggedOption::LogOut
+        }
+        else if "d".to_string() == buffer{
+            return LoggedOption::DeleteAccount
+        }
+        else{
+            LoggedOption::InvalidOption
+        }
+
+
+    }
+
     pub fn clear_panel(){
         
         print!("\x1B[2J\x1B[1;1H");
@@ -599,6 +623,156 @@ impl Panel{
         let mut output = stdout();
         execute!(output, Clear(ClearType::All)).unwrap();
         */
+
+    }
+
+    pub fn generate_logged_user_panel(owner: &Owner, wallet: &Wallet){
+
+        let (total_terminal_columns, _) = size().unwrap();
+
+        Panel::clear_panel();
+        let title = format!("{}", wallet.name);
+        let title_budget = format!("{}{:.2}", "$", 0.00);
+        let title_date = format!("{:<5} {:<20}UTC", "Since", wallet.creation_date.format("%Y-%m-%d %H:%M:%S"));
+        let mut row = 0;
+        let mut column = 0;
+
+        while row < 9{
+
+            while column < total_terminal_columns {
+
+                if  row == 0{
+                            
+                    if column == (total_terminal_columns - title.len() as u16) / 2{
+
+                        print!("{}", title);
+                        column += title.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!("-");
+                    }
+
+                }
+                else if row == 1 {
+
+                    if column == (total_terminal_columns - title_budget.len() as u16) / 2{
+
+                        print!("{}", title_budget);
+                        column += title_budget.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!(" ");
+                    }
+
+
+                }
+                else if row == 2{
+
+                    if column == (total_terminal_columns - title_date.len() as u16) / 2{
+
+                        print!("{}", title_date);
+                        column += title_date.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!(" ");
+                    }
+
+
+                }
+                else if row == 3{
+
+                    print!("-");
+
+                }
+                else if row == 4{
+
+                    if column == 0{
+                                
+                        print!("{:<4}{:<2}{:<11}", "(B)", "-", "Buy Cryptos");
+                        let adjust = format!("{:<4}{:<2}{:<11}", "(B)", "-", "Buy Cryptos");
+                        column += adjust.len() as u16 - 1;
+                    }
+                    else if column == (total_terminal_columns - 1){
+                        //empty
+                    }
+                    else {
+                            
+                        print!("");
+                    }
+
+
+                }
+                else if row == 5 {
+
+                    if column == 0{
+                                
+                        print!("{:<4}{:<2}{:<11}", "(L)", "-", "Log Out");
+                        let adjust = format!("{:<4}{:<2}{:<11}", "(L)", "-", "Log Out");
+                        column += adjust.len() as u16 - 1;
+                    }
+                    else if column == (total_terminal_columns - 1){
+                        //empty
+                    }
+                    else {
+                            
+                        print!("");
+                    }
+
+
+                }
+                else if row == 6{
+
+
+                    if column == 0{
+                                
+                        print!("{:<4}{:<2}{:<14}", "(D)", "-", "Delete Account");
+                        let adjust = format!("{:<4}{:<2}{:<14}", "(D)", "-", "Delete Account");
+                        column += adjust.len() as u16 - 1;
+                    }
+                    else if column == (total_terminal_columns - 1){
+                        //empty
+                    }
+                    else {
+                            
+                        print!("");
+                    }
+
+
+
+                }
+                else if row == 7{
+
+                    print!("-");
+
+                }
+                else{
+
+                    if column == 0{
+                        print!("{:<7}{:<2}{:<15}", "Option",":","( )");
+                        let adjust = format!("{:<7}{:<2}{:<15}", "Option",":","( )");
+                        column += adjust.len() as u16 - 1;
+                    }
+                    else if column == total_terminal_columns - 1{
+                        //empty   
+                    }
+                    else {
+                        print!("");
+                    }
+
+                }
+                column += 1;
+            }
+
+            column = 0;
+            row += 1;
+            println!("");
+
+
+        }
+
 
     }
 

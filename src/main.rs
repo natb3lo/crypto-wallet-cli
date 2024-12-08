@@ -1,12 +1,12 @@
 mod enums;
 mod entities;
 
-use enums::{menu_option::MenuOption, prog_status::ProgramStatus::{RUNNING as RUNNING, NOT_RUNNING as NOT_RUNNING}};
-use entities::{concrete::token::TokenInDatFile, services::{db_connection::DbConnection, panel::Panel, validate_registration::Validation}};
-use std::{fs, thread::{self, sleep}};
+use enums::{menu_option::MenuOption, prog_status::{ProgramStatus::{RUNNING as RUNNING, NOT_RUNNING as NOT_RUNNING}, LoggedOption}};
+use entities::{concrete::token::TokenInDatFile, services::{app_files::ApplicationFiles, db_connection::DbConnection, panel::Panel, validate_registration::Validation}};
+use std::{fs, process::exit, thread::{self, sleep}};
 use std::time::Duration;
 use std::{env, process};
-use tokio_postgres::NoTls;
+use tokio_postgres::{error, NoTls};
 use std::fs::{OpenOptions, create_dir_all};
 use entities::services::app_files::ProgramFileCounter;
 
@@ -29,7 +29,19 @@ async fn main() {
         db_url = format!("postgres://postgres:natunix.23@{}:5432/walletproject", db_ip);
     }
 
-    ProgramFileCounter::update_file_counter().await;
+    ApplicationFiles::update_file_counter().await;
+    let index_file = match ApplicationFiles::get_index_file().await{
+
+        Ok(f) => f,
+
+        Err(_error) => {
+
+            println!("[ERROR] : GENERATION OF <app_files\\index.dat> HAS FAILED!");
+            process::exit(1);
+
+        }
+
+    };
     //let data = fs::read("app_files\\index.dat").unwrap();
     //let token_dat_list: Vec<TokenInDatFile> = bincode::deserialize(&data).unwrap();
     //thread::sleep(Duration::from_secs(20));
@@ -86,16 +98,55 @@ async fn main() {
 
                     Ok((user, pass, _)) => (user, pass),
 
-                    Err(error) => {
+                    Err(_error) => {
                         Panel::clear_panel();
                         continue;
                     }
                 };
 
-                if (DbConnection::exists_user_wallet_relation(&psql_client, &username, &password).await){
+                if DbConnection::exists_user_wallet_relation(&psql_client, &username, &password).await{
 
                     //USUÁRIO LOGADO...
-                    println!("USUÁRIO LOGADO...");
+                    //println!("USUÁRIO LOGADO...");
+                    let (owner, wallet) = DbConnection::get_owner_wallet_ralation(&psql_client, &username).await;
+
+                    let mut is_logged = true;
+                    while is_logged{
+
+                        Panel::clear_panel();
+                        Panel::generate_logged_user_panel(&owner, &wallet);
+                        let logged_option = Panel::get_logged_user_input();
+    
+                        match logged_option {
+                            
+                            LoggedOption::Buy => {
+                                Panel::clear_panel();
+                                println!("Future buy options here...");
+                                thread::sleep(Duration::from_secs(3));
+                            }
+                            LoggedOption::LogOut => {
+                                is_logged = false;
+                            }
+                            LoggedOption::DeleteAccount => {
+    
+                                Panel::clear_panel();
+                                println!("Future delete option here...");
+                                thread::sleep(Duration::from_secs(3));
+                            
+                            }
+                            LoggedOption::InvalidOption => {
+                                Panel::clear_panel();
+                                println!("[ALERT] INVALID OPTION!");
+                                thread::sleep(Duration::from_secs(3));
+                            }
+    
+                        }
+
+
+
+                    }
+
+                    //thread::sleep(Duration::from);
 
                 }
                 else{
@@ -127,7 +178,7 @@ async fn main() {
                     }
                 };
 
-                if (Validation::is_create_wallet_valid(&username, &pass, &pass_confirmation, &psql_client).await){
+                if Validation::is_create_wallet_valid(&username, &pass, &pass_confirmation, &psql_client).await{
 
                     
                     Panel::clear_panel();
@@ -170,7 +221,7 @@ async fn main() {
 
         }
          
-        program_status = NOT_RUNNING;
+        //program_status = NOT_RUNNING;
 
     }
     //------------>End of Program<---------------------

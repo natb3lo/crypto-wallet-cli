@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{Date, DateTime, Utc};
 use rand::Rng;
 
 pub struct Wallet{
@@ -26,6 +26,18 @@ impl Wallet{
         let id = rand::thread_rng().gen_range(1..999999999);
 
         id
+
+    }
+
+    pub fn from_str_to_utc(str_time: &String) -> DateTime<Utc>{
+
+        println!("{}", str_time);
+        let formatted_str = str_time.replace(" UTC", "Z");
+
+        let date_time_utc: DateTime<Utc> = DateTime::parse_from_rfc3339(&formatted_str).unwrap().with_timezone(&Utc);
+
+        date_time_utc
+
 
     }
     

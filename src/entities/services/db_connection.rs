@@ -1,5 +1,7 @@
+use chrono::Date;
 use tokio_postgres::{tls::NoTlsStream, types::ToSql, Client, Connection, NoTls, Socket};
-use crate::entities::concrete::{owner::{self, Owner}, wallet::Wallet};
+use crate::entities::concrete::{owner::{self, Owner}, wallet::{Wallet, Status}};
+
 pub struct DbConnection;
 
 impl DbConnection{
@@ -68,6 +70,41 @@ impl DbConnection{
         else {
             false
         }
+
+
+    }
+
+    pub async fn get_owner_wallet_ralation(psql_client: &Client, username: &String) -> (Owner, Wallet){
+
+        let query_owner = "SELECT * FROM owner WHERE name=$1";
+        let query_wallet = "SELECT id, name, status, ownername, password, creationdate 
+                                    FROM wallet where ownername=$1
+                                    LIMIT 1";
+
+        let row_owner = psql_client.query_one(query_owner, &[&username]).await.unwrap();
+        let row_wallet = psql_client.query_one(query_wallet, &[&username]).await.unwrap();
+
+        let owner = Owner{
+            name: row_owner.get("name"),
+        };
+
+       
+        let wallet_status_field_row: String = row_wallet.get("status");
+        let wallet_creation_date_field_row: String = row_wallet.get("creationdate");
+        
+        let wallet = Wallet{
+            id: row_wallet.get("id"),
+            name: row_wallet.get("name"),
+            status: Status::to_status(&wallet_status_field_row),
+            owner_name: row_wallet.get("ownername"),
+            password: row_wallet.get("password"),
+            creation_date: Wallet::from_str_to_utc(&wallet_creation_date_field_row),
+        };
+
+        (owner, wallet)
+
+
+        
 
 
     }
