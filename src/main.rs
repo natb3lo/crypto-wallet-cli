@@ -2,7 +2,7 @@ mod enums;
 mod entities;
 
 use enums::{menu_option::MenuOption, prog_status::{ProgramStatus::{RUNNING as RUNNING, NOT_RUNNING as NOT_RUNNING}, LoggedOption}};
-use entities::{concrete::token::TokenInDatFile, services::{app_files::ApplicationFiles, db_connection::DbConnection, panel::Panel, validate_registration::Validation}};
+use entities::{concrete::{token::TokenInDatFile, wallet, walletoken::Walletoken}, services::{api_interaction::WebInteraction, app_files::ApplicationFiles, db_connection::DbConnection, panel::Panel, validate_registration::Validation}};
 use std::{fs, process::exit, thread::{self, sleep}};
 use std::time::Duration;
 use std::{env, process};
@@ -28,9 +28,10 @@ async fn main() {
         db_ip = args[1].clone();
         db_url = format!("postgres://postgres:natunix.23@{}:5432/walletproject", db_ip);
     }
-
+    
+    thread::sleep(Duration::from_secs(2));
     ApplicationFiles::update_file_counter().await;
-    let index_file = match ApplicationFiles::get_index_file().await{
+    let mut index_file = match ApplicationFiles::get_index_file().await{
 
         Ok(f) => f,
 
@@ -108,7 +109,7 @@ async fn main() {
 
                     //USUÁRIO LOGADO...
                     //println!("USUÁRIO LOGADO...");
-                    let (owner, wallet) = DbConnection::get_owner_wallet_ralation(&psql_client, &username).await;
+                    let (owner, mut wallet) = DbConnection::get_owner_wallet_ralation(&psql_client, &username).await;
 
                     let mut is_logged = true;
                     while is_logged{
@@ -121,16 +122,160 @@ async fn main() {
                             
                             LoggedOption::Buy => {
                                 Panel::clear_panel();
-                                println!("Future buy options here...");
+                                
+                                Panel::get_buy_panel();
+                                let buyer_option = Panel::get_input_from_search_panel();
+                                //println!("input: {}", buyer_option);
+                                //thread::sleep(Duration::from_secs(3));
+
+                                if buyer_option != "r".to_string(){
+
+                                    //find in index file... PROBLEM!!!
+                                    let token_dat_fmt = match ApplicationFiles::search_in_index_file(&mut index_file, &buyer_option){
+
+                                        Ok(tk) => tk,
+
+                                        Err(_error) => {
+
+                                            println!("Token not found!");
+                                            continue;
+
+                                        }
+
+                                    };
+
+                                    let mut token = WebInteraction::get_token(&token_dat_fmt.id).await;
+                                    //Panel::clear_panel();
+                                    //println!("Afetr get token = {:?}", token);
+                                    //thread::sleep(Duration::from_secs(4));
+                                    if token.name != "".to_string(){
+                                        
+                                        //println!("Token: {:?}", token);
+                                        Panel::clear_panel();
+                                        Panel::buy_token_panel(&token, &wallet);
+                                        //thread::sleep(Duration::from_secs(3));
+                                        let input =Panel::get_input_from_buy_panel();
+
+                                        //teste
+                                        /*
+                                        Panel::clear_panel();
+                                        println!("Input from buy panel: {}", input);
+                                        thread::sleep(Duration::from_secs(4));
+                                        */
+
+                                        if input != "r".to_string(){
+                                            
+                                            let order: f64 = match input.trim().parse(){
+    
+                                                Ok(value) => value,
+    
+                                                Err(error) => {
+    
+                                                    Panel::clear_panel();
+                                                    println!("[ALERT] : THAT'S NOT A NUMBER!");
+                                                    thread::sleep(Duration::from_secs(2));
+                                                    continue;
+                                                }
+    
+                                            };
+
+                                            //teste
+                                            /*
+                                            Panel::clear_panel();
+                                            println!("Input from buy panel after convertion: {}", order);
+                                            thread::sleep(Duration::from_secs(4));
+                                            */
+
+                                            if order <= wallet.balance{
+
+                                                let wallettoken = Walletoken::acquisition(order, &mut wallet, &token, &psql_client).await;
+                                                Panel::clear_panel();
+                                                println!("🎆 THIS IS THE WAY!!");
+                                                //println!("{:?}", wallettoken);
+                                                thread::sleep(Duration::from_secs(2));
+                                            }
+                                            else {
+                                                
+                                            }
+                                        }
+                                        else{
+                                            continue;
+                                        }
+
+                                    }
+                                    else{
+
+                                        println!("[ERROR] : Unable to get token from api!");
+
+                                    }
+
+                                }
+                                else{
+                                    continue;
+                                }
+
                                 thread::sleep(Duration::from_secs(3));
+
+
                             }
+
+                            LoggedOption::MyCryptos => {
+
+                                let mut loop_continue = true;
+                                while loop_continue{
+
+                                    Panel::clear_panel();
+                                    let (walletoken_list, token_list) = DbConnection::get_walletoken_list_from_wallet_id(&wallet, &psql_client).await.unwrap();
+                                    let str = Panel::show_your_cryptos_panel(&wallet, &walletoken_list, &token_list);
+
+                                    if str == "continue".to_string(){
+                                        loop_continue = false;
+                                    }
+                                    else{
+                                        //
+                                    }
+
+
+                                }
+
+
+                            }
+
                             LoggedOption::LogOut => {
                                 is_logged = false;
                             }
                             LoggedOption::DeleteAccount => {
     
                                 Panel::clear_panel();
-                                println!("Future delete option here...");
+                                //println!("Future delete option here...");
+
+                                Panel::get_delete_account_panel();
+                                let op = Panel::get_delete_account_panel_input();
+
+                                if op == "c".to_string(){
+
+                                    //excluir no BD
+                                    DbConnection::delete_user_wallet_relation(&owner, &wallet, &psql_client).await;
+                                    Panel::clear_panel();
+                                    println!("[MESSAGE] : ACCOUNT DELETED!");
+                                    thread::sleep(Duration::from_secs(2));
+                                    break;
+
+                                }
+                                else if op == "r".to_string() {
+
+                                    continue;
+
+                                }
+                                else{
+
+                                    Panel::clear_panel();
+                                    println!("[ALERT] : INVALID OPTION!");
+                                    thread::sleep(Duration::from_secs(2));
+                                    continue;
+
+                                }
+
                                 thread::sleep(Duration::from_secs(3));
                             
                             }

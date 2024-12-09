@@ -11,6 +11,7 @@ pub enum LoggedOption{
 
     Buy,
     LogOut,
+    MyCryptos,
     DeleteAccount,
     InvalidOption,
 

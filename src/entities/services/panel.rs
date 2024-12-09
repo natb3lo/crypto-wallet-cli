@@ -1,6 +1,6 @@
 use std::{fmt::Error, io::{self, stdout}, num::ParseIntError};
 
-use crate::{entities::concrete::{owner::Owner, wallet::Wallet}, enums::menu_option::MenuOption};
+use crate::{entities::concrete::{owner::Owner, token::Token, wallet::Wallet, walletoken::{self, Walletoken}}, enums::menu_option::MenuOption};
 use crate::enums::prog_status::LoggedOption;
 use crossterm::{cursor::{self, MoveTo}, event::read, execute, terminal::{size, Clear, ClearType}};
 use std::thread;
@@ -497,8 +497,13 @@ impl Panel{
 
             MenuOption::CREATE_WALLET => {
 
+                let title_username = format!("{:<17}{:<3}", "USERNAME",":");
+                let title_pass = format!("{:<17}{:<3}", "PASSWORD",":");
+                let title_pass_confirm = format!("{:<17}{:<3}", "CONFIRM PASSWORD",":");
+
+
                 execute!(output, cursor::SavePosition).unwrap();
-                execute!(output, cursor::MoveTo(19, 1)).unwrap();
+                execute!(output, cursor::MoveTo(19, 0)).unwrap();
                 io::stdin().read_line(&mut buffer).unwrap();
                 //execute!(output, cursor::RestorePosition).unwrap();
                 buffer = buffer.trim().to_string();
@@ -507,7 +512,7 @@ impl Panel{
                 buffer.clear();
                         
                 //execute!(output, cursor::SavePosition).unwrap();
-                execute!(output, cursor::MoveTo(19, 2)).unwrap();
+                execute!(output, cursor::MoveTo(19, 1)).unwrap();
                 //io::stdin().read_line(&mut buffer).unwrap();
                 buffer = read_password().unwrap();
                 //execute!(output, cursor::RestorePosition).unwrap();
@@ -516,7 +521,7 @@ impl Panel{
         
                 buffer.clear();
                 //execute!(output, cursor::SavePosition).unwrap();
-                execute!(output, cursor::MoveTo(19, 3)).unwrap();
+                execute!(output, cursor::MoveTo(19, 2)).unwrap();
                 //io::stdin().read_line(&mut buffer).unwrap();
                 buffer = read_password().unwrap();
                 execute!(output, cursor::RestorePosition).unwrap();
@@ -524,7 +529,7 @@ impl Panel{
                 password_confirmation = buffer.clone();
         
                 buffer.clear();
-                execute!(output, cursor::MoveTo(10, 8)).unwrap();
+                execute!(output, cursor::MoveTo(10, 7)).unwrap();
                 io::stdin().read_line(&mut buffer).unwrap();
         
                 buffer = buffer.trim().to_string().to_lowercase();
@@ -589,12 +594,12 @@ impl Panel{
 
     pub fn get_logged_user_input() -> LoggedOption{
         
-        
+        let opt_str = format!("{:<7}{:<2}{:<2}", "Option",":","( )");
         let mut buffer = String::new();
         let mut output = stdout();
-
+       
         execute!(output, cursor::SavePosition).unwrap();
-        execute!(output, cursor::MoveTo(10, 8)).unwrap();
+        execute!(output, cursor::MoveTo((opt_str.len() as u16 - 2), 7)).unwrap();
         io::stdin().read_line(&mut buffer).unwrap();
         execute!(output, cursor::RestorePosition).unwrap();
         
@@ -608,6 +613,9 @@ impl Panel{
         }
         else if "d".to_string() == buffer{
             return LoggedOption::DeleteAccount
+        }
+        else if "m".to_string() == buffer{
+            return LoggedOption::MyCryptos
         }
         else{
             LoggedOption::InvalidOption
@@ -632,12 +640,12 @@ impl Panel{
 
         Panel::clear_panel();
         let title = format!("{}", wallet.name);
-        let title_budget = format!("{}{:.2}", "$", 0.00);
+        let title_budget = format!("{}{:.2}", "$", wallet.balance);
         let title_date = format!("{:<5} {:<20}UTC", "Since", wallet.creation_date.format("%Y-%m-%d %H:%M:%S"));
         let mut row = 0;
         let mut column = 0;
 
-        while row < 9{
+        while row < 10{
 
             while column < total_terminal_columns {
 
@@ -705,7 +713,24 @@ impl Panel{
 
 
                 }
-                else if row == 5 {
+                else if row == 5{
+
+                    if column == 0{
+                                
+                        print!("{:<4}{:<2}{:<11}", "(M)", "-", "My Cryptos");
+                        let adjust = format!("{:<4}{:<2}{:<11}", "(M)", "-", "My Cryptos");
+                        column += adjust.len() as u16 - 1;
+                    }
+                    else if column == (total_terminal_columns - 1){
+                        //empty
+                    }
+                    else {
+                            
+                        print!("");
+                    }
+
+                }
+                else if row == 6 {
 
                     if column == 0{
                                 
@@ -723,7 +748,7 @@ impl Panel{
 
 
                 }
-                else if row == 6{
+                else if row == 7{
 
 
                     if column == 0{
@@ -743,7 +768,7 @@ impl Panel{
 
 
                 }
-                else if row == 7{
+                else if row == 8{
 
                     print!("-");
 
@@ -773,6 +798,346 @@ impl Panel{
 
         }
 
+    }
+
+    pub fn get_buy_panel(){
+
+        let (total_terminal_columns, _) = size().unwrap();
+
+        let title = format!("{} ", "🔎");
+        let title_msg = format!("[ TIP💡] : \'r\' TO RETURN...");
+        let mut row = 0;
+        let mut column = 0;
+
+        while row < 4{
+
+            while column < total_terminal_columns {
+
+                if row == 0 || row == 2{
+                    print!("-");
+                }
+                else if row == 1{
+
+                    if column == (total_terminal_columns - title.len() as u16) / 2{
+
+                        print!("{}", title);
+                        column += title.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!(" ");
+                    }
+                    
+
+
+                }
+                else{
+
+                    if column == (total_terminal_columns - title.len() as u16) / 2{
+
+                        print!("{}", title_msg);
+                        column += title_msg.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!(" ");
+                    }
+
+                }
+
+                column += 1;
+
+            }
+
+            column = 0;
+            row += 1;
+            println!("");
+
+        }
+
+
+
+    }
+
+    pub fn get_input_from_search_panel() -> String{
+
+        let (total_terminal_columns, _) = size().unwrap();
+        let title = format!("{} : ", "🔎");
+
+
+
+        let mut buffer = String::new();
+        let mut output = stdout();
+
+        execute!(output, cursor::SavePosition).unwrap();
+        execute!(output, cursor::MoveTo((total_terminal_columns/2 as u16) + 1, 1)).unwrap();
+        io::stdin().read_line(&mut buffer).unwrap();
+        execute!(output, cursor::RestorePosition).unwrap();
+        
+        buffer = buffer.trim().to_lowercase();
+
+        buffer
+
+
+    }
+
+    pub fn buy_token_panel(token: &Token, wallet: &Wallet){
+
+        let (total_terminal_columns, _) = size().unwrap();
+
+        let title = format!("{}🪙 ", token.name);
+        let title_mkt_value = format!("💹 ${:.2}", token.mkt_value);
+        let title_your_balance = format!("{:<13}{:<2}${:.2}", "Balance", ":",wallet.balance);
+        let mut row = 0;
+        let mut column = 0;
+
+        while row < 6{
+
+            while column < total_terminal_columns {
+
+                if  row == 0{
+                            
+                    if column == (total_terminal_columns - title.len() as u16) / 2{
+
+                        print!("{}", title);
+                        column += title.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!("-");
+                    }
+                }
+                else if row == 1{
+
+                    if column == (total_terminal_columns - title.len() as u16) / 2{
+
+                        print!("{}", title_mkt_value);
+                        column += title_mkt_value.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!(" ");
+                    }
+
+                }
+                else if row == 2{
+
+                    print!("-");
+
+                }
+                else if row == 3{
+
+                    if column == 0{
+                        print!("{}", title_your_balance);
+                        let adjust = format!("{}", title_your_balance);
+                        column += adjust.len() as u16 - 1;
+                    }
+                    else if column == total_terminal_columns - 1{
+                        //empty   
+                    }
+                    else {
+                        print!("");
+                    }
+                }
+                else if row == 4{
+
+                    if column == 0{
+
+                        println!("{:<13}{:<2}$", "Amount to Buy", ":")
+
+                    }
+
+                }
+                else if row == 5{
+
+                    if column == 0{
+                        println!("");
+                        println!("[MESSAGE]: \'r\' TO RETURN...")
+                    }
+
+                }
+                column += 1;
+
+            }
+            column = 0;
+            row += 1;
+            println!("");
+
+
+        }
+
+
+    }
+
+    pub fn get_input_from_buy_panel() -> String{
+
+        let str_size = format!("{:<13}{:<2}$", "Amount to Buy", ":");
+
+        let mut buffer = String::new();
+        let mut output = stdout();
+
+        execute!(output, cursor::SavePosition).unwrap();
+        execute!(output, cursor::MoveTo((str_size.len() as u16), 3)).unwrap();
+        io::stdin().read_line(&mut buffer).unwrap();
+        execute!(output, cursor::RestorePosition).unwrap();
+
+        buffer
+
+    }
+
+    pub fn get_delete_account_panel(){
+
+        let (total_terminal_columns, _) = size().unwrap();
+
+        let title = format!("{}", "DELETE ACCOUNT");
+        let title_confirm = format!("{:<4}{:<2}{:<8}", "(C)", "-","CONFIRM");
+        let title_return = format!("{:<4}{:<2}{:<8}", "(R)", "-","RETURN");
+        let mut row = 0;
+        let mut column = 0;
+
+        while row < 5{
+
+            while column < total_terminal_columns {
+
+                if  row == 0{
+                            
+                    if column == (total_terminal_columns - title.len() as u16) / 2{
+
+                        print!("{}", title);
+                        column += title.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!("-");
+                    }
+                }
+                else if row == 1{
+
+                    if column == (total_terminal_columns - title.len() as u16) / 2{
+
+                        print!("{}", title_confirm);
+                        column += title_confirm.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!(" ");
+                    }
+
+                }
+                else if row == 2{
+
+                    if column == (total_terminal_columns - title.len() as u16) / 2{
+
+                        print!("{}", title_return);
+                        column += title_return.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!(" ");
+                    }
+
+                }
+                else if row == 3{
+
+                    print!("-");
+
+                }
+                else{
+                    if column == 0{
+                        
+                        println!("{:<7}{:<2}", "Option", ":");
+                    }
+                    else{
+                        break;
+                    }
+
+                }
+                column += 1;
+            }
+            column = 0;
+            row += 1;
+            println!("");
+
+        }
+
+    }
+
+    pub fn get_delete_account_panel_input() -> String{
+
+        let str_size = format!("{:<7}{:<2}", "Option", ":");
+
+        let mut buffer = String::new();
+        let mut output = stdout();
+
+        execute!(output, cursor::SavePosition).unwrap();
+        execute!(output, cursor::MoveTo((str_size.len() as u16), 4)).unwrap();
+        io::stdin().read_line(&mut buffer).unwrap();
+        execute!(output, cursor::RestorePosition).unwrap();
+
+        buffer.trim().to_string().to_lowercase()
+
+
+    }
+
+    pub fn show_your_cryptos_panel(wallet: &Wallet, walletoken_list: &Vec<Walletoken>, token_list: &Vec<Token>) -> String{
+
+        let (total_terminal_columns, _) = size().unwrap();
+        let mut total_balance = 0.0;
+
+        for walletoken in walletoken_list{
+
+            //println!("{}\n{}", walletoken.token_symbol, walletoken.amount);
+            for token in token_list{
+
+                if walletoken.token_symbol == token.symbol{
+
+                    total_balance += walletoken.amount * token.mkt_value;
+
+                }
+
+            }
+            
+
+        }
+        let total_balance_str = format!("{:.2}", total_balance);
+        let mut row = 0;
+        let mut column = 0;
+
+        while row < 1{
+            while  column < total_terminal_columns {
+                if row == 0{
+                    if column == (total_terminal_columns - total_balance_str.len() as u16) / 2{
+
+                        print!("${}", total_balance_str);
+                        column += total_balance_str.len() as u16 - 1;
+
+                    }
+                    else{
+                        print!("-");
+                    }
+                }
+                else{
+                    print!(" ");
+                }
+                column += 1;
+            
+            }
+            column = 0;
+            row += 1;
+            println!("");
+        }
+
+        for walletoken in walletoken_list{
+
+            println!("{} - {} tokens", walletoken.token_symbol, walletoken.amount);
+
+        }
+
+        println!("\nType any key to continue...");
+        let mut buffer = String::new();
+        io::stdin().read_line(&mut buffer).unwrap();
+
+        return "continue".to_string();
 
     }
 

@@ -64,6 +64,7 @@ impl Validation{
                             owner_name: username.to_string(),
                             password: pass.to_string(),
                             creation_date: Utc::now(),
+                            balance: 10000.00,
                         };
 
                         let owner = Owner{

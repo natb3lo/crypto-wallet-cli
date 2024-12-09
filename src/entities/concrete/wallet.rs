@@ -9,6 +9,7 @@ pub struct Wallet{
     pub owner_name: String,
     pub password: String,
     pub creation_date: DateTime<Utc>,
+    pub balance: f64,
 
 }
 
