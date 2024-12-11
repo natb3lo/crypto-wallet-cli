@@ -20,8 +20,10 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2{
         
+        Panel::clear_panel();
         println!("🚨: PROGRAM NEEDS THE DATABASE'S IP ADRESS AS ARGUMENT [xxx.xxx.xxx.xxx]!");
-        process::exit(1);
+        //process::exit(1);
+        return
 
     }
     else {
@@ -81,7 +83,7 @@ async fn main() {
             Err(_error) => {
 
                 Panel::clear_panel();
-                println!("[ERROR] : ONLY NUMBERS ARE ALLOWED!");
+                println!("[ ERROR 🚨 ] : ONLY NUMBERS ARE ALLOWED!");
                 thread::sleep(Duration::from_secs(2));
                 continue;
 
@@ -137,7 +139,7 @@ async fn main() {
 
                                         Err(_error) => {
 
-                                            println!("Token not found!");
+                                            println!("[ ALERT ⚠️ ] : TOKEN NOT FOUND!");
                                             continue;
 
                                         }
@@ -172,7 +174,7 @@ async fn main() {
                                                 Err(error) => {
     
                                                     Panel::clear_panel();
-                                                    println!("[ALERT] : THAT'S NOT A NUMBER!");
+                                                    println!("[ ALERT ⚠️ ] : THAT'S NOT A NUMBER!");
                                                     thread::sleep(Duration::from_secs(2));
                                                     continue;
                                                 }
@@ -190,7 +192,7 @@ async fn main() {
 
                                                 let wallettoken = Walletoken::acquisition(order, &mut wallet, &token, &psql_client).await;
                                                 Panel::clear_panel();
-                                                println!("🎆 THIS IS THE WAY!!");
+                                                println!("[ MESSAGE 🎆 ] : THIS IS THE WAY!!");
                                                 //println!("{:?}", wallettoken);
                                                 thread::sleep(Duration::from_secs(2));
                                             }
@@ -205,7 +207,7 @@ async fn main() {
                                     }
                                     else{
 
-                                        println!("[ERROR] : Unable to get token from api!");
+                                        println!("[ ERROR 🚨 ] : UNABLE TO GET TOKEN FROM API!");
 
                                     }
 
@@ -214,7 +216,7 @@ async fn main() {
                                     continue;
                                 }
 
-                                thread::sleep(Duration::from_secs(3));
+                                thread::sleep(Duration::from_secs(2));
 
 
                             }
@@ -257,7 +259,7 @@ async fn main() {
                                     //excluir no BD
                                     DbConnection::delete_user_wallet_relation(&owner, &wallet, &psql_client).await;
                                     Panel::clear_panel();
-                                    println!("[MESSAGE] : ACCOUNT DELETED!");
+                                    println!("[ MESSAGE 💬 ] : ACCOUNT DELETED!");
                                     thread::sleep(Duration::from_secs(2));
                                     break;
 
@@ -270,19 +272,19 @@ async fn main() {
                                 else{
 
                                     Panel::clear_panel();
-                                    println!("[ALERT] : INVALID OPTION!");
+                                    println!("[ ALERT ⚠️ ] : INVALID OPTION!");
                                     thread::sleep(Duration::from_secs(2));
                                     continue;
 
                                 }
 
-                                thread::sleep(Duration::from_secs(3));
+                                thread::sleep(Duration::from_secs(2));
                             
                             }
                             LoggedOption::InvalidOption => {
                                 Panel::clear_panel();
-                                println!("[ALERT] INVALID OPTION!");
-                                thread::sleep(Duration::from_secs(3));
+                                println!("[ ALERT ⚠️ ] INVALID OPTION!");
+                                thread::sleep(Duration::from_secs(2));
                             }
     
                         }
@@ -295,8 +297,8 @@ async fn main() {
 
                 }
                 else{
-
-                    println!("[ALERT] : USERNAME OR PASSWORD DOES NOT EXIST!");
+                    Panel::clear_panel();
+                    println!("[ ALERT ⚠️ ] : USERNAME OR PASSWORD DOES NOT EXIST!");
                     thread::sleep(Duration::from_secs(2));
                     continue;
 
@@ -327,7 +329,7 @@ async fn main() {
 
                     
                     Panel::clear_panel();
-                    println!(" ✅ {}'s WALLET ADDED SUCCESSFULLY!!", username);
+                    println!(" [ MESSAGE ✅ ] : {}'s WALLET ADDED SUCCESSFULLY!!", username);
                     thread::sleep(Duration::from_secs(2));
                     continue;
 
@@ -344,7 +346,7 @@ async fn main() {
             MenuOption::EXIT => {
 
                 Panel::clear_panel();
-                println!("[MESSAGE] : PROGRAM FINISHED!");
+                println!("[ MESSAGE 💬 ] : PROGRAM FINISHED!");
                 program_status = NOT_RUNNING;
 
             }
@@ -352,7 +354,7 @@ async fn main() {
             MenuOption::INVALID_OPTION => {
 
                 Panel::clear_panel();
-                println!("[ALERT] : INVALID OPTION!");
+                println!("[ ALERT ⚠️ ] : INVALID OPTION!");
                 thread::sleep(Duration::from_secs(2));
                 continue;
 

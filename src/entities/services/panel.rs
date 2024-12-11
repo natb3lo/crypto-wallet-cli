@@ -1,4 +1,4 @@
-use std::{fmt::Error, io::{self, stdout}, num::ParseIntError};
+use std::{fmt::Error, io::{self, stdout, Write}, num::ParseIntError};
 
 use crate::{entities::concrete::{owner::Owner, token::Token, wallet::Wallet, walletoken::{self, Walletoken}}, enums::menu_option::MenuOption};
 use crate::enums::prog_status::LoggedOption;
@@ -503,7 +503,7 @@ impl Panel{
 
 
                 execute!(output, cursor::SavePosition).unwrap();
-                execute!(output, cursor::MoveTo(19, 0)).unwrap();
+                execute!(output, cursor::MoveTo(19, 1)).unwrap();
                 io::stdin().read_line(&mut buffer).unwrap();
                 //execute!(output, cursor::RestorePosition).unwrap();
                 buffer = buffer.trim().to_string();
@@ -512,7 +512,7 @@ impl Panel{
                 buffer.clear();
                         
                 //execute!(output, cursor::SavePosition).unwrap();
-                execute!(output, cursor::MoveTo(19, 1)).unwrap();
+                execute!(output, cursor::MoveTo(19, 2)).unwrap();
                 //io::stdin().read_line(&mut buffer).unwrap();
                 buffer = read_password().unwrap();
                 //execute!(output, cursor::RestorePosition).unwrap();
@@ -521,7 +521,7 @@ impl Panel{
         
                 buffer.clear();
                 //execute!(output, cursor::SavePosition).unwrap();
-                execute!(output, cursor::MoveTo(19, 2)).unwrap();
+                execute!(output, cursor::MoveTo(19, 3)).unwrap();
                 //io::stdin().read_line(&mut buffer).unwrap();
                 buffer = read_password().unwrap();
                 execute!(output, cursor::RestorePosition).unwrap();
@@ -529,7 +529,7 @@ impl Panel{
                 password_confirmation = buffer.clone();
         
                 buffer.clear();
-                execute!(output, cursor::MoveTo(10, 7)).unwrap();
+                execute!(output, cursor::MoveTo(10, 8)).unwrap();
                 io::stdin().read_line(&mut buffer).unwrap();
         
                 buffer = buffer.trim().to_string().to_lowercase();
@@ -599,7 +599,7 @@ impl Panel{
         let mut output = stdout();
        
         execute!(output, cursor::SavePosition).unwrap();
-        execute!(output, cursor::MoveTo((opt_str.len() as u16 - 2), 7)).unwrap();
+        execute!(output, cursor::MoveTo(opt_str.len() as u16 - 2, 9)).unwrap();
         io::stdin().read_line(&mut buffer).unwrap();
         execute!(output, cursor::RestorePosition).unwrap();
         
@@ -627,6 +627,7 @@ impl Panel{
     pub fn clear_panel(){
         
         print!("\x1B[2J\x1B[1;1H");
+        std::io::stdout().flush().unwrap();
         /*
         let mut output = stdout();
         execute!(output, Clear(ClearType::All)).unwrap();
@@ -885,8 +886,8 @@ impl Panel{
 
         let (total_terminal_columns, _) = size().unwrap();
 
-        let title = format!("{}🪙 ", token.name);
-        let title_mkt_value = format!("💹 ${:.2}", token.mkt_value);
+        let title = format!("{}🪙", token.name);
+        let title_mkt_value = format!("${:.8}", token.mkt_value);
         let title_your_balance = format!("{:<13}{:<2}${:.2}", "Balance", ":",wallet.balance);
         let mut row = 0;
         let mut column = 0;
@@ -977,11 +978,11 @@ impl Panel{
         let mut output = stdout();
 
         execute!(output, cursor::SavePosition).unwrap();
-        execute!(output, cursor::MoveTo((str_size.len() as u16), 3)).unwrap();
+        execute!(output, cursor::MoveTo((str_size.len() as u16), 4)).unwrap();
         io::stdin().read_line(&mut buffer).unwrap();
         execute!(output, cursor::RestorePosition).unwrap();
 
-        buffer
+        buffer.trim().to_lowercase().to_string()
 
     }
 
@@ -1099,7 +1100,7 @@ impl Panel{
             
 
         }
-        let total_balance_str = format!("{:.2}", total_balance);
+        let total_balance_str = format!("${:.2}", total_balance);
         let mut row = 0;
         let mut column = 0;
 
@@ -1108,7 +1109,7 @@ impl Panel{
                 if row == 0{
                     if column == (total_terminal_columns - total_balance_str.len() as u16) / 2{
 
-                        print!("${}", total_balance_str);
+                        print!("{}", total_balance_str);
                         column += total_balance_str.len() as u16 - 1;
 
                     }
@@ -1133,7 +1134,7 @@ impl Panel{
 
         }
 
-        println!("\nType any key to continue...");
+        println!("\nType \'Enter\' to continue...");
         let mut buffer = String::new();
         io::stdin().read_line(&mut buffer).unwrap();
 
