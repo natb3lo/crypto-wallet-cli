@@ -1,5 +1,6 @@
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write, ErrorKind};
+use std::process::exit;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use bincode::{deserialize_from, serialize_into};
@@ -30,18 +31,51 @@ impl ApplicationFiles {
 
 impl ApplicationFiles {
     
-    pub async fn update_file_counter(){
+    pub async fn update_file_counter() -> i32{
 
-        let file_counter_path = "app_files\\execution.dat";
-        let f_path = Path::new(file_counter_path);
-        let dir = f_path.parent().unwrap();
-        if !dir.exists(){
-            create_dir_all(dir).unwrap();
+        let mut fc_path = String::new();
+
+        if cfg!(target_os = "windows"){
+            fc_path = "app_files\\execution.dat".to_string();
+        }
+        else if cfg!(target_os = "linux"){
+            fc_path = "app_files/execution.dat".to_string();
+        }
+        else{
+            println!("[ERROR] : UNSUPORTED OS VERSION!");
+            exit(1);
         }
 
-        let mut f = OpenOptions::new().create(true).write(true).read(true).open(f_path).unwrap();
+        let mut fc = match File::open(&fc_path){
+            Ok(_f) => OpenOptions::new().create(true).write(true).read(true).open(fc_path).unwrap(),
 
-        let mut counter:ProgramFileCounter = match deserialize_from(&f){
+            Err(error) => match error.kind(){
+                
+                ErrorKind::NotFound => {
+
+                    if let Some(parent_dir) = std::path::Path::new(&fc_path).parent(){
+
+                        if let Err(e) = create_dir_all(parent_dir){
+                            panic!("[ERROR] : PROBLEM CREATING DIRECTORY FOR <execution.dat> FILE!");
+                        }
+
+                    }
+                    match File::create(&fc_path){
+                        Ok(fc) => fc,
+                        Err(e) => panic!("[ERROR] : PROBLEM CREATING <execution.dat> FILE!"),
+
+                    }
+                }
+                other_error => {
+                    panic!("[ERROR] : PROBLEM OPENING <execution.dat> FILE!")
+                }
+
+            }
+        };
+
+        //let mut f = OpenOptions::new().create(true).write(true).read(true).open(fc_path).unwrap();
+
+        let mut counter:ProgramFileCounter = match deserialize_from(&fc){
 
             Ok(counter) => counter,
 
@@ -51,80 +85,155 @@ impl ApplicationFiles {
 
         };
         
-        f.seek(SeekFrom::Start(0)).unwrap();
+        fc.seek(SeekFrom::Start(0)).unwrap();
         
         if counter.counter == 0{
-
+            
             counter.counter += 1;
-            serialize_into(&f, &counter).unwrap();
-            //baixa arquivo de ids
+            serialize_into(&fc, &counter).unwrap();
+            return 0;
 
         }
         else{
+            
             counter.counter += 1;
-            serialize_into(&f, &counter).unwrap();
+            serialize_into(&fc, &counter).unwrap();
+            counter.counter
         }
 
     }
 
-    pub async fn get_index_file() -> Result<File, Error>{
+    pub async fn get_index_file(counter: i32) -> Result<File, Error>{
 
-        let url_list = "https://api.coingecko.com/api/v3/coins/list";
-        let response = reqwest::get(url_list).await.unwrap();
-        if response.status().is_success(){
+        let mut fi_path = String::new();
+        if cfg!(target_os = "windows"){
+            fi_path = "app_files\\index.dat".to_string();
+        }
+        else if cfg!(target_os = "linux"){
+            fi_path = "app_files/index.dat".to_string();
+        }
+        else{
+            println!("[ERROR] : UNSUPORTED OS VERSION!");
+            exit(1);
+        }
+
+        if counter == 0{
+            let url_list = "https://api.coingecko.com/api/v3/coins/list";
+            let response = reqwest::get(url_list).await.unwrap();
+            if response.status().is_success(){
+                
+                    //println!("get_dex...");
+                    //thread::sleep(Duration::from_secs(3));
+                    let mut token_dat_list: Vec<TokenInDatFile> = response.json().await.unwrap();
+                    //println!("{:?}", token_dat_list.get(100));
+                    //thread::sleep(Duration::from_secs(3));
+                    for token_dat in token_dat_list.iter_mut(){
+                        token_dat.name = token_dat.name.to_lowercase();
+                    }
+    
+                    //println!("{:?}", token_dat_list.get(100));
+                    //thread::sleep(Duration::from_secs(3));
+    
+                    token_dat_list.sort_by(|a, b| a.name.cmp(&b.name));
+    
+                    //let index_file_path = "app_files\\index.dat";
+                    //let f_index_path = Path::new(index_file_path);
+                   //let index_dir = f_index_path.parent().unwrap();
+                    /*
+                    if !index_dir.exists(){
+                        create_dir_all(f_index_path).unwrap();
+                    }
+                    */
+    
+                    let mut fi = match File::open(&fi_path){
+                        Ok(_f) => OpenOptions::new().create(true).write(true).read(true).open(fi_path).unwrap(),
             
-                //println!("get_dex...");
-                //thread::sleep(Duration::from_secs(3));
-                let mut token_dat_list: Vec<TokenInDatFile> = response.json().await.unwrap();
-                //println!("{:?}", token_dat_list.get(100));
-                //thread::sleep(Duration::from_secs(3));
-                for token_dat in token_dat_list.iter_mut(){
-                    token_dat.name = token_dat.name.to_lowercase();
+                        Err(error) => match error.kind(){
+                            
+                            ErrorKind::NotFound => {
+            
+                                if let Some(parent_dir) = std::path::Path::new(&fi_path).parent(){
+            
+                                    if let Err(e) = create_dir_all(parent_dir){
+                                        panic!("[ERROR] : PROBLEM CREATING DIRECTORY FOR <index.dat> FILE!");
+                                    }
+            
+                                }
+                                match File::create(&fi_path){
+                                    Ok(fc) => fc,
+                                    Err(e) => panic!("[ERROR] : PROBLEM CREATING <index.dat> FILE!"),
+            
+                                }
+                            }
+                            other_error => {
+                                panic!("[ERROR] : PROBLEM OPENING <index.dat> FILE!")
+                            }
+            
+                        }
+                    };
+    
+                    //let mut f_index = OpenOptions::new().create(true).write(true).read(true).open(f_index_path).unwrap();
+    
+                    for tk in token_dat_list{
+    
+                        let mut buffer = [0u8; 96];
+    
+                        buffer[0..32].copy_from_slice(&ApplicationFiles::pad_field(&tk.id, 32));
+                        buffer[32..64].copy_from_slice(&ApplicationFiles::pad_field(&tk.name, 32));
+                        buffer[64..96].copy_from_slice(&ApplicationFiles::pad_field(&tk.symbol, 32));
+    
+                        fi.write_all(&buffer).unwrap();
+                    }
+    
+                    /* 
+                    
+                    let serialized = bincode::serialize(&token_dat_list).unwrap();
+                    
+                    f_index.write_all(&serialized).unwrap();
+                    */
+    
+                    Ok(fi)
+    
+                }
+                else{
+    
+                    Err(Error)
+    
                 }
 
-                //println!("{:?}", token_dat_list.get(100));
-                //thread::sleep(Duration::from_secs(3));
+        }
+        else{
 
-                token_dat_list.sort_by(|a, b| a.name.cmp(&b.name));
-
-                let index_file_path = "app_files\\index.dat";
-                let f_index_path = Path::new(index_file_path);
-                let index_dir = f_index_path.parent().unwrap();
-
-                if !index_dir.exists(){
-                    create_dir_all(f_index_path).unwrap();
+            let mut fi = match File::open(&fi_path){
+                Ok(_f) => OpenOptions::new().create(true).write(true).read(true).open(fi_path).unwrap(),
+    
+                Err(error) => match error.kind(){
+                    
+                    ErrorKind::NotFound => {
+    
+                        if let Some(parent_dir) = std::path::Path::new(&fi_path).parent(){
+    
+                            if let Err(e) = create_dir_all(parent_dir){
+                                panic!("[ERROR] : PROBLEM CREATING DIRECTORY FOR <execution.dat> FILE!");
+                            }
+    
+                        }
+                        match File::create(&fi_path){
+                            Ok(fc) => fc,
+                            Err(e) => panic!("[ERROR] : PROBLEM CREATING <execution.dat> FILE!"),
+    
+                        }
+                    }
+                    other_error => {
+                        panic!("[ERROR] : PROBLEM OPENING <execution.dat> FILE!")
+                    }
+    
                 }
+            };
 
-                let mut f_index = OpenOptions::new().create(true).write(true).read(true).open(f_index_path).unwrap();
+            Ok(fi)
 
-                for tk in token_dat_list{
-
-                    let mut buffer = [0u8; 96];
-
-                    buffer[0..32].copy_from_slice(&ApplicationFiles::pad_field(&tk.id, 32));
-                    buffer[32..64].copy_from_slice(&ApplicationFiles::pad_field(&tk.name, 32));
-                    buffer[64..96].copy_from_slice(&ApplicationFiles::pad_field(&tk.symbol, 32));
-
-                    f_index.write_all(&buffer);
-                }
-
-                /* 
-                
-                let serialized = bincode::serialize(&token_dat_list).unwrap();
-                
-                f_index.write_all(&serialized).unwrap();
-                */
-
-                Ok(f_index)
-
-            }
-            else{
-
-                Err(Error)
-
-            }
-
-
+        }
 
     }
 

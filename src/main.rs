@@ -31,9 +31,9 @@ async fn main() {
         db_url = format!("postgres://postgres:natunix.23@{}:5432/walletproject", db_ip);
     }
     
-    thread::sleep(Duration::from_secs(2));
-    ApplicationFiles::update_file_counter().await;
-    let mut index_file = match ApplicationFiles::get_index_file().await{
+    //thread::sleep(Duration::from_secs(2));
+    let counter = ApplicationFiles::update_file_counter().await;
+    let mut index_file = match ApplicationFiles::get_index_file(counter).await{
 
         Ok(f) => f,
 
