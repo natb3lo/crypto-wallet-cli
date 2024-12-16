@@ -37,6 +37,8 @@ impl ApplicationFiles {
 
         if cfg!(target_os = "windows"){
             fc_path = "app_files\\execution.dat".to_string();
+            //println!("Windows!");
+            //thread::sleep(Duration::from_secs(3));
         }
         else if cfg!(target_os = "linux"){
             fc_path = "app_files/execution.dat".to_string();
@@ -107,10 +109,10 @@ impl ApplicationFiles {
 
         let mut fi_path = String::new();
         if cfg!(target_os = "windows"){
-            fi_path = "app_files\\index.dat".to_string();
+            fi_path = ".\\app_files\\index.dat".to_string();
         }
         else if cfg!(target_os = "linux"){
-            fi_path = "app_files/index.dat".to_string();
+            fi_path = "./app_files/index.dat".to_string();
         }
         else{
             println!("[ERROR] : UNSUPORTED OS VERSION!");

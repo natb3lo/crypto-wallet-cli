@@ -372,6 +372,6 @@ async fn main() {
 
     }
     //------------>End of Program<---------------------
-
+    std::mem::drop(index_file);
 
 }
